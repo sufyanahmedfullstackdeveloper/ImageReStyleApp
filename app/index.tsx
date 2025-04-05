@@ -40,7 +40,7 @@ const HomeScreen = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [jobId, setJobId] = useState<any>(null);
   const [isJobCompleted, setIsJobCompleted] = useState(false);
-
+  const [shouldPoll, setShouldPoll] = useState(false);
   // RTK Query hooks
   const [uploadPhoto, { isLoading: isUploadingPhoto }] =
     useUploadPhotoMutation();
@@ -136,19 +136,37 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    if (jobStatus?.status === "completed" && jobStatus.resultUrl) {
-      setIsUploading(false);
-      setIsJobCompleted(true);
-      router.push({
-        pathname: "/result",
-        params: {
-          imageUri: jobStatus.resultUrl,
-          style: imageStyle,
-        },
-      });
+    if (!jobStatus) return;
+
+    switch (jobStatus.status) {
+      case "completed":
+        if (jobStatus.resultUrl) {
+          setIsUploading(false);
+          setIsJobCompleted(true);
+          router.push({
+            pathname: "/result",
+            params: {
+              imageUri: jobStatus.resultUrl,
+              style: imageStyle,
+            },
+          });
+        }
+        break;
+      case "failed":
+        setIsUploading(false);
+        setIsJobCompleted(true);
+        toast.show(jobStatus.error || "Processing failed", {
+          type: "danger",
+          duration: 4000,
+        });
+        setJobId(null);
+        setShouldPoll(false);
+        break;
+      case "processing":
+        // Continue polling
+        break;
     }
   }, [jobStatus, imageStyle, router]);
-
   return (
     <View className="flex-1 bg-background dark:bg-dark-background">
       <ScrollView className="flex-1 p-4">
