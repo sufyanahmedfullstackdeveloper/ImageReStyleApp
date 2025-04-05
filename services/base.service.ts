@@ -15,7 +15,7 @@ interface ErrorResponse {
 }
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: "https://2f77-39-63-59-69.ngrok-free.app/api",
+  baseUrl: `${process.env.API_URL}/api`,
   prepareHeaders: async (headers) => {
     const token = "notoken";
 
