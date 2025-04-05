@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,30 +14,43 @@ import { useToast } from "react-native-toast-notifications";
 import Header from "@/components/Header";
 import FloatButton from "@/components/FloatButton";
 import Chip from "@/components/Chip";
-import { useUploadPhotoMutation } from "@/services/image/image.service";
+import {
+  useUploadPhotoMutation,
+  useGetJobStatusQuery,
+} from "@/services/image/image.service";
 
 interface ImageAsset {
   uri: string;
-  fileName?: string;
-  type?: string;
+  fileName?: string | null;
+  type?: string | null;
 }
 
-const stylesList = [
-  "Anime",
-  "Cyberpunk",
-  "Cartoon",
-  "Retro",
-  "Watercolor",
-  "3D",
-];
+interface JobStatus {
+  status: "processing" | "completed";
+  url?: string;
+}
+
+const stylesList = ["Anime"];
 
 const HomeScreen = () => {
   const router = useRouter();
+  const toast = useToast();
   const [image, setImage] = useState<ImageAsset | null>(null);
   const [imageStyle, setImageStyle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadPhoto] = useUploadPhotoMutation();
-  const toast = useToast();
+  const [jobId, setJobId] = useState<any>(null);
+  const [isJobCompleted, setIsJobCompleted] = useState(false);
+
+  // RTK Query hooks
+  const [uploadPhoto, { isLoading: isUploadingPhoto }] =
+    useUploadPhotoMutation();
+  const { data: jobStatus, isLoading: isPolling } = useGetJobStatusQuery(
+    jobId,
+    {
+      skip: !jobId || isJobCompleted,
+      pollingInterval: 1000,
+    }
+  );
 
   const getMimeType = (uri: string): string => {
     const extension = uri.split(".").pop()?.toLowerCase();
@@ -65,9 +78,11 @@ const HomeScreen = () => {
     if (!result.canceled && result.assets[0].uri) {
       setImage({
         uri: result.assets[0].uri,
-        fileName: result.assets[0].fileName,
-        type: result.assets[0].type,
+        fileName: result.assets[0].fileName ?? null,
+        type: result.assets[0].type ?? null,
       });
+      setJobId(null);
+      setIsJobCompleted(false);
     }
   };
 
@@ -98,27 +113,17 @@ const HomeScreen = () => {
       setIsUploading(true);
       const formData = new FormData();
 
-   
       const mimeType = getMimeType(image.uri);
       formData.append("image", {
         uri: image.uri,
         name: image.fileName || `image_${Date.now()}.${mimeType.split("/")[1]}`,
         type: mimeType,
-      } as unknown as Blob);
+      } as any);
 
-     
       formData.append("styleType", imageStyle);
 
- 
-      const { data } = await uploadPhoto(formData).unwrap();
-
-      router.push({
-        pathname: "/result",
-        params: {
-          imageUri: data.imageUrl,
-          style: imageStyle,
-        },
-      });
+      const { jobId, message } = await uploadPhoto(formData).unwrap();
+      setJobId(jobId as any);
     } catch (error) {
       console.error("Upload failed:", error);
       toast.show("Upload failed. Please try again.", {
@@ -126,10 +131,23 @@ const HomeScreen = () => {
         placement: "top",
         duration: 4000,
       });
-    } finally {
       setIsUploading(false);
     }
   };
+
+  useEffect(() => {
+    if (jobStatus?.status === "completed" && jobStatus.resultUrl) {
+      setIsUploading(false);
+      setIsJobCompleted(true);
+      router.push({
+        pathname: "/result",
+        params: {
+          imageUri: jobStatus.resultUrl,
+          style: imageStyle,
+        },
+      });
+    }
+  }, [jobStatus, imageStyle, router]);
 
   return (
     <View className="flex-1 bg-background dark:bg-dark-background">
@@ -184,7 +202,7 @@ const HomeScreen = () => {
       <Modal visible={isUploading} transparent>
         <View className="flex-1 justify-center items-center bg-black/50">
           <View className="bg-white dark:bg-dark-card p-6 rounded-2xl w-80">
-            <Text className="text-lg font-bold mb-4 text-center text-foreground dark:text-dark-foreground ">
+            <Text className="text-lg font-bold mb-4 text-center text-foreground dark:text-dark-foreground">
               Applying {imageStyle} Magic...
             </Text>
             <ActivityIndicator size="small" color="#C90083" />

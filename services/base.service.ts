@@ -1,11 +1,9 @@
-
 import {
   BaseQueryFn,
   FetchArgs,
   FetchBaseQueryError,
 } from "@reduxjs/toolkit/query";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query";
-
 
 interface ErrorResponse {
   status?: number;
@@ -17,7 +15,7 @@ interface ErrorResponse {
 }
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: "https://324a-39-58-116-191.ngrok-free.app/api",
+  baseUrl: "https://2f77-39-63-59-69.ngrok-free.app/api",
   prepareHeaders: async (headers) => {
     const token = "notoken";
 
@@ -70,8 +68,6 @@ export const baseQueryWithReauth: BaseQueryFn<
 
         break;
     }
-
-   
   }
 
   return result;

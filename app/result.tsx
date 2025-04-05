@@ -73,7 +73,7 @@ const ResultScreen = () => {
   return (
     <View className="flex-1 bg-background dark:bg-dark-background">
       <ScrollView className="flex-1 p-4">
-        <Header title="Result" iconName="sparkles" />
+        <Header title="Result" iconName="sparkles" backButton/>
 
         <View className="my-8">
           <Text className="text-primary dark:text-dark-primary text-center text-xl mb-4">
